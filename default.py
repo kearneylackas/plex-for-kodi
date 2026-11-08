@@ -24,7 +24,15 @@ kiosk_always = False
 boot_delay = False
 skip_ensure_last_used = False
 argvlen = len(sys.argv)
-if argvlen > 1:
+if argvlen > 2 and sys.argv[1] == 'open':
+    # external open/play request: RunScript(script.plexmod, open, <ratingKey>[, play])
+    # queued for HomeWindow.tick, which only acts on it if "allow_external_open" is enabled
+    import json
+    setGlobalProperty('external_open', json.dumps({
+        "key": sys.argv[2],
+        "play": argvlen > 3 and sys.argv[3].lower() in ('play', '1', 'true')
+    }))
+elif argvlen > 1:
     try:
         from_kiosk = int(sys.argv[1]) > 0
     except ValueError:

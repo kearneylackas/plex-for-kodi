@@ -2402,6 +2402,50 @@ class HomeWindow(kodigui.BaseWindow, util.CronReceiver, CommonMixin, SpoilersMix
                     pass
                 return self.doUpdate()
 
+    def externalOpenResponder(self):
+        """
+        Handle an external open/play request queued by the monitor (OPEN notification) or by default.py
+        (RunScript(script.plexmod, open, <ratingKey>[, play])). Payload: {"key": "<ratingKey>", "play": bool}
+        """
+        raw = util.getGlobalProperty('external_open', consume=True)
+        if not raw:
+            return False
+
+        if not util.getSetting('allow_external_open', False):
+            util.DEBUG_LOG("Home: External open request ignored, disabled in settings")
+            return False
+
+        try:
+            req = json.loads(raw)
+            key = str(req["key"]).strip()
+            play = bool(req.get("play", False))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            util.ERROR("Home: Invalid external open request: {}".format(raw))
+            return False
+
+        if not key:
+            return False
+
+        util.DEBUG_LOG("Home: External open request: key={}, play={}".format(key, play))
+
+        if xbmc.Player().isPlayingVideo():
+            player.PLAYER.stopAndWait()
+
+        try:
+            command = opener.open(key, auto_play=play)
+            if command == "NODATA":
+                raise util.NoDataException
+        except util.NoDataException:
+            util.ERROR("No data - deleted or server disconnected?", notify=True, time_ms=5000)
+            return True
+        except Exception:
+            util.ERROR("Home: External open request failed for key: {}".format(key))
+            return True
+
+        if command and not self._restarting:
+            self.processCommand(command)
+        return True
+
     def tick(self):
         if self._shuttingDown:
             util.DEBUG_LOG("Home: Not ticking, shutdown flag set")
@@ -2413,6 +2457,9 @@ class HomeWindow(kodigui.BaseWindow, util.CronReceiver, CommonMixin, SpoilersMix
 
         if self.is_active and self.service_responder():
             util.DEBUG_LOG("Home: Not ticking, service responder signalled positive exit")
+            return
+
+        if self.is_active and self.externalOpenResponder():
             return
 
         if self.is_active and self._updateSourceChanged:

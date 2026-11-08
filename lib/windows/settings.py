@@ -1160,6 +1160,10 @@ class Settings(object):
                     [('none', T(32702, 'Nothing')), ('restart', T(33071, 'Restart PM4K'))]
                     + [('wait_{}'.format(s), T(33072, '').format(s)) for s in [1, 2, 3] + list(range(5, 65, 5))]
                 ).description(T(33075, '')),
+                BoolSetting(
+                    'allow_external_open', T(35050, 'Allow external open/play requests'), False
+                ).description(T(35051, 'Lets other apps (e.g. home automation via Kodi JSON-RPC) open or play a '
+                                       'Plex item by its ratingKey on the selected server.')),
                 BoolSetting('debug', T(32024, 'Debug Logging'), False),
                 BoolSetting('dump_config', T(33642, 'Debug Logging'), False).description(T(33643)),
             )

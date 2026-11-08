@@ -72,6 +72,19 @@ class UtilityMonitor(xbmc.Monitor, signalsmixin.SignalsMixin):
             return
 
         LOG("Notification: {} {} {}".format(sender, method, data))
+        if sender == 'script.plexmod' and method.endswith('OPEN'):
+            # external open/play request, e.g. via JSON-RPC:
+            # JSONRPC.NotifyAll(sender="script.plexmod", message="OPEN", data={"key": "12345", "play": true})
+            # Only queue it here; HomeWindow.tick consumes it (same pattern as the update notification).
+            if not getSetting('allow_external_open', False):
+                LOG("External open request ignored, disabled in settings")
+                return
+            _setGlobalProperty('external_open', data or '')
+            from . import util
+            if util.CRON:
+                util.CRON.forceTick()
+            return
+
         if sender == 'script.plexmod' and method.endswith('RESTORE'):
             from .windows import kodigui, windowutils
 
